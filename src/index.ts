@@ -1,7 +1,8 @@
 import { MikroORM } from "@mikro-orm/core";
 import "reflect-metadata";
-import { __prod__ } from "./constants";
+import { COOKIE_NAME, __prod__ } from "./constants";
 import { Post } from "./entities/Post";
+import cors from "cors";
 import microConfig from "./mikro-orm.config";
 import express from "express";
 import { ApolloServer } from "apollo-server-express";
@@ -13,10 +14,13 @@ import redis from "redis";
 import session from "express-session";
 import connectRedis from "connect-redis";
 import { MyContext } from "./types";
+import { User } from "./entities/User";
+//import { sendEmail } from "./utils/sendEmail";
 
 const main = async () => {
   //database connectivity using mikroorm
   const orm = await MikroORM.init(microConfig);
+  await orm.em.nativeDelete(User, {});
   orm.getMigrator().up();
 
   //server connectivity
@@ -24,10 +28,16 @@ const main = async () => {
 
   const RedisStore = connectRedis(session);
   const redisClient = redis.createClient();
+  app.use(
+    cors({
+      origin: "http://localhost:3000",
+      credentials: true,
+    })
+  );
 
   app.use(
     session({
-      name: "qid",
+      name: COOKIE_NAME,
 
       store: new RedisStore({
         client: redisClient, //lets the session know we are using redis
@@ -54,7 +64,7 @@ const main = async () => {
     context: ({ req, res }): MyContext => ({ em: orm.em, req, res }),
   });
 
-  apolloServer.applyMiddleware({ app });
+  apolloServer.applyMiddleware({ app, cors: false });
 
   const posts = await orm.em.find(Post, {});
   console.log(posts);
@@ -65,5 +75,3 @@ const main = async () => {
 main().catch((err) => {
   console.error(err);
 });
-
-console.log("hello word");

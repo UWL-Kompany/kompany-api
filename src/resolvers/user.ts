@@ -11,7 +11,8 @@ import {
 } from "type-graphql";
 import { User } from "../entities/User";
 import argon2 from "argon2";
-
+import { COOKIE_NAME } from "../constants";
+//import { EntityManager } from "@mikro-orm/postgresql";
 @InputType()
 class UsernamePasswordInput {
   @Field()
@@ -38,6 +39,12 @@ class UserResponse {
 
 @Resolver()
 export class UserResolver {
+  // @Mutation(() => Boolean)
+  // async forgotPassword(@Arg("email") email: string, @Ctx() { em }: MyContext) {
+  //   //const user = await em.findOne(User, {email})
+  //   return true;
+  // }
+
   @Query(() => User, { nullable: true })
   async me(@Ctx() { req, em }: MyContext) {
     // you are not logged in
@@ -69,17 +76,31 @@ export class UserResolver {
       };
     }
     const hashedPassword = await argon2.hash(options.password);
+    //--- prebuilt user create
     const user = em.create(User, {
       username: options.username,
       password: hashedPassword,
     });
-
+    //let user;
     try {
+      //--query builder
+      // const result = await (em as EntityManager)
+      //   .createQueryBuilder(User)
+      //   .getKnexQuery()
+      //   .insert({
+      //     username: options.username,
+      //     password: hashedPassword,
+      //     created_at: new Date(),
+      //     updated_at: new Date(),
+      //   })
+      //   .returning("*");
+      // user = result[0];
       await em.persistAndFlush(user);
     } catch (err) {
       //duplicate username error
-      if (err.code === "23505") {
+      if (err.detail.includes("already exists")) {
         //|| err.detail.includes("already exists")){
+        //err.code === "23505"
         return {
           errors: [
             {
@@ -122,5 +143,20 @@ export class UserResolver {
     req.session.userId = user.id;
 
     return { user };
+  }
+
+  @Mutation(() => Boolean)
+  logout(@Ctx() { req, res }: MyContext) {
+    return new Promise((resolve) =>
+      req.session.destroy((err) => {
+        if (err) {
+          console.log(err);
+          resolve(false);
+          return;
+        }
+        res.clearCookie(COOKIE_NAME);
+        resolve(true);
+      })
+    );
   }
 }
