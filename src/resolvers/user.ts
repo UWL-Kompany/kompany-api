@@ -15,6 +15,7 @@ import { UsernamePasswordInput } from "./UsernamePasswordInput";
 import { validateRegister } from "../utils/validateRegister";
 import { sendEmail } from "../utils/sendEmail";
 import { v4 } from "uuid";
+import { getConnection } from "typeorm";
 
 @ObjectType()
 class FieldError {
@@ -38,7 +39,7 @@ export class UserResolver {
   async changePassword(
     @Arg("token") token: string,
     @Arg("newPassword") newPassword: string,
-    @Ctx() { redis, em, req }: MyContext
+    @Ctx() { redis, req }: MyContext
   ): Promise<UserResponse> {
     if (newPassword.length <= 4) {
       return {
@@ -63,7 +64,8 @@ export class UserResolver {
         ],
       };
     }
-    const user = await em.findOne(User, { id: parseInt(userId) });
+    const userIdNum = parseInt(userId);
+    const user = await User.findOne(userIdNum);
 
     if (!user) {
       return {
@@ -75,8 +77,13 @@ export class UserResolver {
         ],
       };
     }
-    user.password = await argon2.hash(newPassword);
-    await em.persistAndFlush(user);
+
+    await User.update(
+      { id: userIdNum },
+      {
+        password: await argon2.hash(newPassword),
+      }
+    );
     await redis.del(key);
     //login user after changing pass
     req.session.userId = user.id;
@@ -86,9 +93,9 @@ export class UserResolver {
   @Mutation(() => Boolean)
   async forgotPassword(
     @Arg("email") email: string,
-    @Ctx() { em, redis }: MyContext
+    @Ctx() { redis }: MyContext
   ) {
-    const user = await em.findOne(User, { email });
+    const user = await User.findOne({ where: { email } }); // cant shorthand if not searching by pk
     if (!user) {
       //email not in db
       //return true so people fishing for emails dont get the information that an email is invalid when trying to reset pass
@@ -114,59 +121,66 @@ export class UserResolver {
   }
 
   @Query(() => User, { nullable: true })
-  async me(@Ctx() { req, em }: MyContext) {
+  me(@Ctx() { req }: MyContext) {
     // you are not logged in
     if (!req.session.userId) {
       return null;
     }
-    const user = await em.findOne(User, { id: req.session.userId });
-    return user;
+    return User.findOne(req.session.userId);
   }
 
   @Mutation(() => UserResponse)
   async register(
     @Arg("options") options: UsernamePasswordInput,
-    @Ctx() { em, req }: MyContext
+    @Ctx() { req }: MyContext
   ): Promise<UserResponse> {
     const errors = validateRegister(options);
     if (errors) {
       return { errors };
     }
     const hashedPassword = await argon2.hash(options.password);
-    //--- prebuilt user create
-    const user = em.create(User, {
-      username: options.username,
-      password: hashedPassword,
-      email: options.email,
-    });
-    //let user;
+    let user;
     try {
-      //--query builder
-      // const result = await (em as EntityManager)
-      //   .createQueryBuilder(User)
-      //   .getKnexQuery()
-      //   .insert({
-      //     username: options.username,
-      //     password: hashedPassword,
-      //     created_at: new Date(),
-      //     updated_at: new Date(),
-      //   })
-      //   .returning("*");
-      // user = result[0];
-      await em.persistAndFlush(user);
+      //User.create({}).save()--- using built in function
+      //---using query builder in mikro orm
+      const result = await getConnection()
+        .createQueryBuilder()
+        .insert()
+        .into(User)
+        .values({
+          username: options.username,
+          password: hashedPassword,
+          email: options.email,
+        })
+        .returning("*")
+        .execute();
+      //console.log("result", result);
+      user = result.raw[0];
     } catch (err) {
       //duplicate username error
-      if (err.detail.includes("already exists")) {
+      //console.log("err:", err);
+      if (err.code === "23505") {
+        if (err.detail.includes("email")) {
+          return {
+            errors: [
+              {
+                field: "email",
+                message: "That email has been taken",
+              },
+            ],
+          };
+        } else if (err.detail.includes("already exists")) {
+          return {
+            errors: [
+              {
+                field: "username",
+                message: "That username has already been taken",
+              },
+            ],
+          };
+        }
         //|| err.detail.includes("already exists")){
         //err.code === "23505"
-        return {
-          errors: [
-            {
-              field: "username",
-              message: "That username has already been taken",
-            },
-          ],
-        };
       }
     }
 
@@ -182,13 +196,12 @@ export class UserResolver {
   async login(
     @Arg("usernameOrEmail") usernameOrEmail: string,
     @Arg("password") password: string,
-    @Ctx() { em, req }: MyContext
+    @Ctx() { req }: MyContext
   ): Promise<UserResponse> {
-    const user = await em.findOne(
-      User,
+    const user = await User.findOne(
       usernameOrEmail.includes("@")
-        ? { email: usernameOrEmail }
-        : { username: usernameOrEmail }
+        ? { where: { email: usernameOrEmail } }
+        : { where: { username: usernameOrEmail } }
     );
     if (!user) {
       return {

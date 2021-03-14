@@ -1,9 +1,7 @@
-import { MikroORM } from "@mikro-orm/core";
 import "reflect-metadata";
 import { COOKIE_NAME, __prod__ } from "./constants";
 import { Post } from "./entities/Post";
 import cors from "cors";
-import microConfig from "./mikro-orm.config";
 import express from "express";
 import { ApolloServer } from "apollo-server-express";
 import { buildSchema } from "type-graphql";
@@ -14,14 +12,23 @@ import Redis from "ioredis";
 import session from "express-session";
 import connectRedis from "connect-redis";
 import { MyContext } from "./types";
+import { createConnection } from "typeorm";
+import { User } from "./entities/User";
 
 //import { sendEmail } from "./utils/sendEmail";
 
 const main = async () => {
   //database connectivity using mikroorm
-  const orm = await MikroORM.init(microConfig);
-
-  orm.getMigrator().up();
+  const conn = await createConnection({
+    type: "postgres",
+    database: "kompany",
+    username: "postgres",
+    password: "Rubicon1999",
+    logging: true,
+    //synchronize creates tables auto without migrations, useful for development
+    synchronize: true,
+    entities: [User, Post],
+  });
 
   //server connectivity
   const app = express();
@@ -62,12 +69,12 @@ const main = async () => {
       validate: false,
     }),
     //context is a special object accessible to all resolvers
-    context: ({ req, res }): MyContext => ({ em: orm.em, req, res, redis }),
+    context: ({ req, res }): MyContext => ({ req, res, redis }),
   });
 
   apolloServer.applyMiddleware({ app, cors: false });
 
-  const posts = await orm.em.find(Post, {});
+  const posts = await Post.find();
   console.log(posts);
 
   app.listen(4000, () => console.log("server running on localhost:4000"));

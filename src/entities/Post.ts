@@ -1,22 +1,49 @@
-import { Entity, PrimaryKey, Property } from "@mikro-orm/core";
 import { ObjectType, Field } from "type-graphql";
+import {
+  BaseEntity,
+  Column,
+  CreateDateColumn,
+  Entity,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
+} from "typeorm";
+import { User } from "./User";
 
 //converting mikro-orm class into graphql types
 @ObjectType()
 @Entity()
-export class Post {
+//extend to baseEntity allows us to use .find() and .insert()
+// there is another command that sets up repositories in type orm-- todo: find it out
+export class Post extends BaseEntity {
   @Field()
-  @PrimaryKey()
+  @PrimaryGeneratedColumn()
   id!: number;
 
-  @Field(() => String)
-  @Property({ type: "date" })
-  createdAt: Date = new Date();
+  @Field()
+  @Column()
+  title!: string;
+
+  @Field()
+  @Column()
+  text!: string;
+
+  @Field()
+  @Column({ type: "int", default: 0 })
+  points!: number;
+
+  @Field()
+  @Column()
+  creatorId: number;
+
+  @ManyToOne(() => User, (user) => user.posts)
+  creator: User; //whatever we call this field will link to the db with that name eg createrId from creator
 
   @Field(() => String)
-  @Property({ type: "date", onUpdate: () => new Date() })
-  updatedAt: Date = new Date();
-  @Field()
-  @Property({ type: "text" })
-  title!: string;
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @Field(() => String)
+  @UpdateDateColumn()
+  updatedAt: Date;
 }
