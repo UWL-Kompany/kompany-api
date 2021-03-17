@@ -14,6 +14,7 @@ import connectRedis from "connect-redis";
 import { MyContext } from "./types";
 import { createConnection } from "typeorm";
 import { User } from "./entities/User";
+import path from "path";
 
 //import { sendEmail } from "./utils/sendEmail";
 
@@ -25,10 +26,12 @@ const main = async () => {
     username: "postgres",
     password: "Rubicon1999",
     logging: true,
+    migrations: [path.join(__dirname, "./migrations/*")],
     //synchronize creates tables auto without migrations, useful for development
     synchronize: true,
     entities: [User, Post],
   });
+  await conn.runMigrations();
 
   //server connectivity
   const app = express();
@@ -74,8 +77,8 @@ const main = async () => {
 
   apolloServer.applyMiddleware({ app, cors: false });
 
-  const posts = await Post.find();
-  console.log(posts);
+  //const posts = await Post.find();
+  // console.log(posts);
 
   app.listen(4000, () => console.log("server running on localhost:4000"));
 };
