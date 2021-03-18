@@ -36,6 +36,7 @@ export class Post extends BaseEntity {
   @Column()
   creatorId: number;
 
+  @Field()
   @ManyToOne(() => User, (user) => user.posts)
   creator: User; //whatever we call this field will link to the db with that name eg createrId from creator
 

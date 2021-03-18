@@ -17,7 +17,7 @@ import { User } from "./entities/User";
 import path from "path";
 
 //import { sendEmail } from "./utils/sendEmail";
-
+//rerun
 const main = async () => {
   //database connectivity using mikroorm
   const conn = await createConnection({
@@ -38,6 +38,7 @@ const main = async () => {
 
   const RedisStore = connectRedis(session);
   const redis = new Redis();
+  //await Post.delete({});
 
   app.use(
     cors({
