@@ -5,9 +5,11 @@ import {
   CreateDateColumn,
   Entity,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from "typeorm";
+import { Updoot } from "./Updoot";
 import { User } from "./User";
 
 //converting mikro-orm class into graphql types
@@ -40,7 +42,10 @@ export class Post extends BaseEntity {
   @ManyToOne(() => User, (user) => user.posts)
   creator: User; //whatever we call this field will link to the db with that name eg createrId from creator
 
-  @Field(() => String)
+  @OneToMany(() => Updoot, (updoot) => updoot.post)
+  updoots: Updoot[];
+
+  @Field()
   @CreateDateColumn()
   createdAt: Date;
 

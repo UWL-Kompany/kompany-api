@@ -15,6 +15,7 @@ import { MyContext } from "./types";
 import { createConnection } from "typeorm";
 import { User } from "./entities/User";
 import path from "path";
+import { Updoot } from "./entities/Updoot";
 
 //import { sendEmail } from "./utils/sendEmail";
 //rerun
@@ -29,7 +30,7 @@ const main = async () => {
     migrations: [path.join(__dirname, "./migrations/*")],
     //synchronize creates tables auto without migrations, useful for development
     synchronize: true,
-    entities: [User, Post],
+    entities: [User, Post, Updoot],
   });
   await conn.runMigrations();
 
