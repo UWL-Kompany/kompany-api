@@ -12,7 +12,6 @@ import {
   FieldResolver,
   Root,
   ObjectType,
-  Info,
 } from "type-graphql";
 import { MyContext } from "../types";
 import { isAuth } from "../middleware/isAuth";
@@ -38,7 +37,7 @@ class PaginatedPosts {
 @Resolver(Post)
 export class PostResvoler {
   @FieldResolver(() => String)
-  //this will return a text snipper through the server instead of through the client,
+  //this will return a text snippet through the server instead of through the client,
   textSnippet(@Root() root: Post) {
     return root.text.slice(0, 50);
   }
@@ -112,16 +111,21 @@ export class PostResvoler {
     //2 types of pagination, offset or curser based
     @Arg("limit", () => Int) limit: number,
     @Arg("cursor", () => String, { nullable: true }) cursor: string | null, //date of new posts
-    @Info() info: any
+    @Ctx() { req }: MyContext
   ): Promise<PaginatedPosts> {
     const realLimit = Math.min(50, limit);
     const realLimitPlusOne = realLimit + 1;
 
     const replacements: any[] = [realLimitPlusOne];
+
+    if (req.session.userId) {
+      replacements.push(req.session.userId);
+    }
+    let cursorIndex = 3;
     if (cursor) {
       replacements.push(new Date(parseInt(cursor)));
+      cursorIndex = replacements.length;
     }
-
     const posts = await getConnection().query(
       `
       select p.*,
@@ -131,10 +135,15 @@ export class PostResvoler {
         'email', u.email,
         'createdAt', u."createdAt",
         'updatedAt', u."updatedAt"
-        ) creator
+        ) creator,
+        ${
+          req.session.userId
+            ? ' (select value from updoot where "userId" = $2 and "postId" = p.id) "voteStatus" '
+            : 'null as "voteStatus"'
+        }
       from post p
       inner join public.user u on u.id = p."creatorId"
-      ${cursor ? `where p."createdAt" < $2` : ""}
+      ${cursor ? `where p."createdAt" < $${cursorIndex}` : ""}
       order by p."createdAt" DESC
       limit $1
     `,
@@ -163,8 +172,8 @@ export class PostResvoler {
   }
 
   @Query(() => Post, { nullable: true })
-  post(@Arg("id") id: number): Promise<Post | undefined> {
-    return Post.findOne(id);
+  post(@Arg("id", () => Int) id: number): Promise<Post | undefined> {
+    return Post.findOne(id, { relations: ["creator"] });
   }
 
   @Mutation(() => Post)
@@ -179,24 +188,45 @@ export class PostResvoler {
     }).save();
   }
   @Mutation(() => Post, { nullable: true })
+  @UseMiddleware(isAuth)
   async updatePost(
-    @Arg("id") id: number,
-    @Arg("title", () => String, { nullable: true }) title: string
+    @Arg("id", () => Int) id: number,
+    @Arg("title", { nullable: true }) title: string,
+    @Arg("text", { nullable: true }) text: string,
+    @Ctx() { req }: MyContext
   ): Promise<Post | null> {
-    const post = await Post.findOne(id); // Post.findOne(id) is shorthand for Post.findOne({where: {id}})
-    if (!post) {
-      return null;
-    }
-    if (typeof title !== undefined) {
-      post.title = title;
-      Post.update({ id }, { title });
-    }
-    return post;
+    const result = await getConnection()
+      .createQueryBuilder()
+      .update(Post)
+      .set({ title, text })
+      .where('id = :id and "creatorId" =:creatorId', {
+        id,
+        creatorId: req.session.userId,
+      })
+      .returning("*")
+      .execute();
+    console.log("result:  ", result);
+    return result.raw[0];
   }
 
   @Mutation(() => Boolean)
-  async deletePost(@Arg("id") id: number): Promise<Boolean> {
-    await Post.delete(id);
+  @UseMiddleware(isAuth)
+  async deletePost(
+    @Arg("id", () => Int) id: number,
+    @Ctx() { req }: MyContext
+  ): Promise<Boolean> {
+    //not cascade method:
+    // const post = await Post.findOne(id);
+    // if (!post) {
+    //   return false;
+    // }
+    // if (post?.creatorId !== req.session.userId) {
+    //   throw new Error("not authorized");
+    // }
+    // await Updoot.delete({ postId: id });
+    // await Post.delete({ id });
+
+    await Post.delete({ id, creatorId: req.session.userId });
     return true;
   }
 }
