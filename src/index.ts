@@ -11,11 +11,11 @@ import { UserResolver } from "./resolvers/user";
 import Redis from "ioredis";
 import session from "express-session";
 import connectRedis from "connect-redis";
-import { MyContext } from "./types";
 import { createConnection } from "typeorm";
 import { User } from "./entities/User";
 import path from "path";
 import { Updoot } from "./entities/Updoot";
+import { createUserLoader } from "./utils/createUserLoader";
 
 //import { sendEmail } from "./utils/sendEmail";
 //rerun
@@ -74,7 +74,12 @@ const main = async () => {
       validate: false,
     }),
     //context is a special object accessible to all resolvers
-    context: ({ req, res }): MyContext => ({ req, res, redis }),
+    context: ({ req, res }) => ({
+      req,
+      res,
+      redis,
+      userLoader: createUserLoader(),
+    }),
   });
 
   apolloServer.applyMiddleware({ app, cors: false });
