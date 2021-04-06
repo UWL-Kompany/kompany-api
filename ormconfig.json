@@ -1,0 +1,10 @@
+{
+  "type": "postgres",
+  "host": "localhost",
+  "port": 5432,
+  "username": "postgres",
+  "password": "Rubicon1999",
+  "database": "kompany",
+  "entities": ["dist/entities/*.js"],
+  "migrations": ["src/migrations/*.js"]
+}

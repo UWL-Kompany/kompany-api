@@ -1,8 +1,8 @@
 import { Field, InputType } from "type-graphql";
 
-//import { EntityManager } from "@mikro-orm/postgresql";
+//todo: rework UsernamePasswordInput to be RegisterInput
 @InputType()
-export class UsernamePasswordInput {
+export class RegisterInput {
   @Field()
   email: string;
   @Field()

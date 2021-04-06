@@ -1,4 +1,4 @@
-import { Field, ObjectType } from "type-graphql";
+import { Field, Int, ObjectType } from "type-graphql";
 import {
   BaseEntity,
   Column,
@@ -11,36 +11,20 @@ import {
 //converting mikro-orm class into graphql types
 @ObjectType()
 @Entity()
-export class User extends BaseEntity {
+//extend to baseEntity allows us to use .find() and .insert()
+// there is another command that sets up repositories in type orm-- todo: find it out
+export class Payment extends BaseEntity {
   @Field()
   @PrimaryGeneratedColumn()
   id!: number;
 
   @Field()
-  @Column({ unique: true })
-  username!: string;
-
-  @Field()
   @Column()
-  firstName!: string;
+  cardholderName!: string;
 
-  @Field()
+  @Field(() => Int)
   @Column()
-  lastName!: string;
-
-  @Field()
-  @Column({ unique: true })
-  email!: string;
-
-  @Column()
-  password!: string;
-
-  @Field()
-  @Column()
-  address!: string;
-
-  @Column()
-  isAdmin!: number;
+  longNumber!: string;
 
   @Field(() => String)
   @CreateDateColumn()
@@ -49,4 +33,8 @@ export class User extends BaseEntity {
   @Field(() => String)
   @UpdateDateColumn()
   updatedAt: Date;
+
+  @Field(() => String)
+  @Column()
+  expiration!: Date;
 }

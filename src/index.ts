@@ -1,22 +1,23 @@
-import "reflect-metadata";
-import { COOKIE_NAME, __prod__ } from "./constants";
-import { Post } from "./entities/Post";
+import { ApolloServer } from "apollo-server-express";
+import connectRedis from "connect-redis";
+require("dotenv-safe").config();
 import cors from "cors";
 import express from "express";
-import { ApolloServer } from "apollo-server-express";
-import { buildSchema } from "type-graphql";
-import { helloResolver } from "./resolvers/hello";
-import { PostResvoler } from "./resolvers/post";
-import { UserResolver } from "./resolvers/user";
-import Redis from "ioredis";
 import session from "express-session";
-import connectRedis from "connect-redis";
-import { createConnection } from "typeorm";
-import { User } from "./entities/User";
+import Redis from "ioredis";
 import path from "path";
-import { Updoot } from "./entities/Updoot";
+import "reflect-metadata";
+import { buildSchema } from "type-graphql";
+import { createConnection } from "typeorm";
+import { COOKIE_NAME, __prod__ } from "./constants";
+import { Order } from "./entities/Order";
+import { Payment } from "./entities/Payment";
+import { Product } from "./entities/Product";
+import { User } from "./entities/User";
+import { helloResolver } from "./resolvers/hello";
+import { ProductResvoler } from "./resolvers/product";
+import { UserResolver } from "./resolvers/user";
 import { createUserLoader } from "./utils/createUserLoader";
-import { createUpdootLoader } from "./utils/createUpdootLoader";
 
 //import { sendEmail } from "./utils/sendEmail";
 //rerun
@@ -24,14 +25,12 @@ const main = async () => {
   //database connectivity using mikroorm
   const conn = await createConnection({
     type: "postgres",
-    database: "kompany",
-    username: "postgres",
-    password: "Rubicon1999",
+    url: process.env.DATABASE_URL,
     logging: true,
     migrations: [path.join(__dirname, "./migrations/*")],
     //synchronize creates tables auto without migrations, useful for development
-    synchronize: true,
-    entities: [User, Post, Updoot],
+    // synchronize: true,
+    entities: [User, Payment, Product, Order],
   });
   await conn.runMigrations();
 
@@ -44,7 +43,7 @@ const main = async () => {
 
   app.use(
     cors({
-      origin: "http://localhost:3000",
+      origin: process.env.CORS_ORIGIN,
       credentials: true,
     })
   );
@@ -63,7 +62,7 @@ const main = async () => {
         sameSite: "lax", //protecting csrf
         secure: __prod__, //cookie only work in https, should or could be true in production,  but set to false in dev
       },
-      secret: "quiouifsjfklj",
+      secret: process.env.SESSION_SECRET,
       resave: false,
       saveUninitialized: false,
     })
@@ -71,7 +70,7 @@ const main = async () => {
 
   const apolloServer = new ApolloServer({
     schema: await buildSchema({
-      resolvers: [helloResolver, PostResvoler, UserResolver],
+      resolvers: [helloResolver, ProductResvoler, UserResolver],
       validate: false,
     }),
     //context is a special object accessible to all resolvers
@@ -80,14 +79,10 @@ const main = async () => {
       res,
       redis,
       userLoader: createUserLoader(),
-      updootLoader: createUpdootLoader(),
     }),
   });
 
   apolloServer.applyMiddleware({ app, cors: false });
-
-  //const posts = await Post.find();
-  // console.log(posts);
 
   app.listen(4000, () => console.log("server running on localhost:4000"));
 };

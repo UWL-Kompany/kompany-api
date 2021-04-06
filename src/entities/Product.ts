@@ -8,39 +8,28 @@ import {
   UpdateDateColumn,
 } from "typeorm";
 
-//converting mikro-orm class into graphql types
 @ObjectType()
 @Entity()
-export class User extends BaseEntity {
+export class Product extends BaseEntity {
   @Field()
   @PrimaryGeneratedColumn()
   id!: number;
 
   @Field()
-  @Column({ unique: true })
-  username!: string;
+  @Column()
+  name!: string;
 
   @Field()
   @Column()
-  firstName!: string;
+  description!: string;
 
   @Field()
   @Column()
-  lastName!: string;
+  stock!: number;
 
-  @Field()
-  @Column({ unique: true })
-  email!: string;
-
+  @Field(() => String)
   @Column()
-  password!: string;
-
-  @Field()
-  @Column()
-  address!: string;
-
-  @Column()
-  isAdmin!: number;
+  nextStock!: Date;
 
   @Field(() => String)
   @CreateDateColumn()
