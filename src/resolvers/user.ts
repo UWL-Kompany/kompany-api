@@ -164,10 +164,14 @@ export class UserResolver {
           username: options.username,
           password: hashedPassword,
           email: options.email,
+          firstName: options.firstName,
+          lastName: options.lastName,
+          address: options.address,
+          isAdmin: 0,
         })
         .returning("*")
         .execute();
-      //console.log("result", result);
+      console.log("result", result);
       user = result.raw[0];
     } catch (err) {
       //duplicate username error

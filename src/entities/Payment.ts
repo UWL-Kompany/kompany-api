@@ -7,6 +7,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from "typeorm";
+import { GraphQLDate } from "graphql-iso-date";
 
 //converting mikro-orm class into graphql types
 @ObjectType()
@@ -26,15 +27,15 @@ export class Payment extends BaseEntity {
   @Column()
   longNumber!: string;
 
-  @Field(() => String)
+  @Field(() => GraphQLDate)
   @CreateDateColumn()
   createdAt: Date;
 
-  @Field(() => String)
+  @Field(() => GraphQLDate)
   @UpdateDateColumn()
   updatedAt: Date;
 
-  @Field(() => String)
+  @Field(() => GraphQLDate)
   @Column()
   expiration!: Date;
 }

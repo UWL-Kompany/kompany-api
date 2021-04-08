@@ -15,12 +15,14 @@ import { Payment } from "./entities/Payment";
 import { Product } from "./entities/Product";
 import { User } from "./entities/User";
 import { helloResolver } from "./resolvers/hello";
+import { OrderResolver } from "./resolvers/order";
 import { ProductResvoler } from "./resolvers/product";
 import { UserResolver } from "./resolvers/user";
 import { createUserLoader } from "./utils/createUserLoader";
 
 //import { sendEmail } from "./utils/sendEmail";
 //rerun
+
 const main = async () => {
   //database connectivity using mikroorm
   const conn = await createConnection({
@@ -29,10 +31,10 @@ const main = async () => {
     logging: true,
     migrations: [path.join(__dirname, "./migrations/*")],
     //synchronize creates tables auto without migrations, useful for development
-    // synchronize: true,
+    synchronize: true,
     entities: [User, Payment, Product, Order],
   });
-  await conn.runMigrations();
+  //await conn.runMigrations();
 
   //server connectivity
   const app = express();
@@ -70,7 +72,7 @@ const main = async () => {
 
   const apolloServer = new ApolloServer({
     schema: await buildSchema({
-      resolvers: [helloResolver, ProductResvoler, UserResolver],
+      resolvers: [helloResolver, ProductResvoler, UserResolver, OrderResolver],
       validate: false,
     }),
     //context is a special object accessible to all resolvers

@@ -23,10 +23,6 @@ export class Order extends BaseEntity {
   @Column()
   price!: number;
 
-  @Field()
-  @Column()
-  longNumber!: string;
-
   @Field(() => String)
   @CreateDateColumn()
   createdAt: Date;

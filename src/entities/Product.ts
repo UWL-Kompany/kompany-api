@@ -7,6 +7,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from "typeorm";
+import { GraphQLDate } from "graphql-iso-date";
 
 @ObjectType()
 @Entity()
@@ -27,15 +28,15 @@ export class Product extends BaseEntity {
   @Column()
   stock!: number;
 
-  @Field(() => String)
+  @Field(() => GraphQLDate)
   @Column()
   nextStock!: Date;
 
-  @Field(() => String)
+  @Field(() => GraphQLDate)
   @CreateDateColumn()
   createdAt: Date;
 
-  @Field(() => String)
+  @Field(() => GraphQLDate)
   @UpdateDateColumn()
   updatedAt: Date;
 }

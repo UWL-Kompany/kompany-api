@@ -1,3 +1,4 @@
+import { GraphQLDate } from "graphql-iso-date";
 import { Field, ObjectType } from "type-graphql";
 import {
   BaseEntity,
@@ -39,14 +40,14 @@ export class User extends BaseEntity {
   @Column()
   address!: string;
 
-  @Column()
+  @Column({ type: "int" })
   isAdmin!: number;
 
-  @Field(() => String)
+  @Field(() => GraphQLDate)
   @CreateDateColumn()
   createdAt: Date;
 
-  @Field(() => String)
+  @Field(() => GraphQLDate)
   @UpdateDateColumn()
   updatedAt: Date;
 }
